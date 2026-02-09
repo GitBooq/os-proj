@@ -1,0 +1,139 @@
+;*******************************
+; I/O Library for bootloader   *
+;*******************************
+
+bits 16
+
+; Global vars
+global MovCursor
+global cursor_x, cursor_y
+global PutChar
+global Print
+
+section .data
+cursor_x db 0 ; current x position
+cursor_y db 0 ; current y position
+
+
+section .text
+
+;*******************************************************
+; MovCursor - Move a cursor to a specific location on
+;  screen and remember this location.
+; Params: bh = Y Coord
+;         bl = X Coord
+; Return: None
+;*******************************************************
+MovCursor:
+    ; save regs
+    push ax
+    push bx
+    push dx
+
+    ; bl contains X coord
+    ; bh contains Y coord
+    ; save coords
+    mov [cursor_x], bl
+    mov [cursor_y], bh
+
+    ; Call for move cursor
+    mov ah, 02h         ; func set cursor
+    mov bh, 0           ; video page number(0 in most cases)
+    mov dh, [cursor_y]  ; set row (Y)
+    mov dl, [cursor_x]  ; set column (X)
+    int 10h             ; call
+
+    ; reload regs
+    pop dx
+    pop bx
+    pop ax
+    ret     ; return
+
+;**********************************************************
+; PutChar: Print a character on screen, at the cursor
+;  position previously set by MovCursor.
+; Params: al = char to print
+;         bl = text color
+;         cx = number of times the character is repeated
+; Return: None
+;**********************************************************
+PutChar:
+    ; save regs
+    push ax
+    push bx
+    push cx
+    
+    ; Call for write char
+    mov ah, 09h ; Write Character/Attribute to Cursor Location
+    mov bh, 0   ; video page number
+    ; al must contain ascii
+    ; bl must contain attribute (color)
+    ; cx must contain times to repeat the char
+    int 10h     ; call
+
+    ; reload registers
+    pop cx
+    pop bx
+    pop ax
+    ret     ; return
+
+;******************************************
+; Print: print a string
+; Params: ds:si = Zero terminated string
+; Return: None
+;******************************************
+Print:
+    ; save registers
+    push cx
+    push bx
+    push ax
+    push si
+
+.print_loop:
+    mov cx, 1     ; repeat count
+    mov bl, 02h   ; set color to green foreground, black background
+    mov al, [si]  ; take char
+
+    cmp al, 0    ; end of string?
+    je .done
+
+    cmp al, 0dh ; carriage return
+    je .car_ret
+
+    cmp al, 0ah ; new line
+    je .new_line
+
+    call PutChar
+    
+    ; move cursor 1 point forward
+    ; change cursor X pos variable
+    inc byte [cursor_x]
+    jmp .move_cur
+
+.car_ret:
+    mov byte [cursor_x], 0
+    jmp .move_cur
+
+.new_line:
+    inc byte [cursor_y]
+    jmp .move_cur
+
+.move_cur:
+    ; set params and call MovCursor
+    mov bh, [cursor_y]  ; Y
+    mov bl, [cursor_x]  ; X
+    call MovCursor
+
+    inc si ; next string character
+    jmp .print_loop ; next cycle iteration
+
+
+
+.done:
+    ; reload registers
+    pop si
+    pop ax
+    pop bx
+    pop cx
+
+    ret ; return
