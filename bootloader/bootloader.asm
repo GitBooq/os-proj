@@ -3,7 +3,9 @@
 ; A Simple Bootloader
 ;******************************************
 bits 16
-org 0x7c00
+%ifidn __OUTPUT_FORMAT__, "bin"
+    org 0x7c00
+%endif
 
 start: jmp boot
 
