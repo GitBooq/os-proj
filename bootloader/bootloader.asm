@@ -50,12 +50,12 @@ boot:
     mov ch, 0 ; track 0
     mov cl, 2 ; sector to read (the second sector)
     mov dh, 0 ; head number
-    mov dl, 0 ; drive number
+    mov dl, 0 ; drive number(0 is floppy)
 
     mov ah, 0x02 ; read sectors from disk
     int 0x13     ; call the BIOS routine
-
-    jmp 0x50:0x0 ; jump and exec the sector!
+    
+    jmp [500h + 18h] ; jump and exec the sector! (entry point 0x18 bytes offset)
 
     hlt ; halt the system
 
